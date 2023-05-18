@@ -3,6 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+
+
+
+
 SMALL_SIZE = 12
 MEDIUM_SIZE = 14
 BIGGER_SIZE = 16
@@ -118,6 +124,7 @@ class Visualize(object):
         heights = [6, 2, 2]
         widths = [14]
         gs_kw = dict(width_ratios=widths, height_ratios=heights)
+
         fig, axs = plt.subplots(nrows=len(heights), ncols=len(widths),
                                 sharex=True,
                                 figsize=(widths[0], int(sum(heights))),
@@ -186,6 +193,65 @@ class Visualize(object):
         else:
             plt.savefig(f"{save_filename}.png")
             plt.close(fig)
+
+
+    def plot_episode_history_plotly(self, history: pd.DataFrame or None = None, save_filename: str or None = None) -> None:
+        """
+        Plot this entire history of an episode including:
+            1) Midpoint prices with trade executions
+            2) Inventory count at every step
+            3) Realized PnL at every step
+
+        :param history: data from past episode
+        :param save_filename: Filename to save image as
+        """
+        if isinstance(history, pd.DataFrame):
+            data = history
+        else:
+            data = self.to_df()
+
+        midpoints = data['midpoint'].values
+        long_fills = data.loc[data['buys'] > 0., 'buys'].index.values
+        short_fills = data.loc[data['sells'] > 0., 'sells'].index.values
+        inventory = data['inventory'].values
+        pnl = data['realized_pnl'].values
+
+        fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.05)
+
+        fig.add_trace(go.Scatter(x=list(range(len(midpoints))), y=midpoints, mode='lines', name='midpoints', opacity=0.6,
+                                 line=dict(color='blue', width=1)), row=1, col=1)
+        fig.add_trace(go.Scatter(x=long_fills, y=midpoints[long_fills], mode='markers', name='buys', opacity=0.7,
+                                 marker=dict(color='green', symbol='triangle-up', size=5)), row=1, col=1)
+        fig.add_trace(go.Scatter(x=short_fills, y=midpoints[short_fills], mode='markers', name='sells', opacity=0.7,
+                                 marker=dict(color='red', symbol='triangle-down', size=5)), row=1, col=1)
+        fig.update_yaxes(title_text='Midpoint Price (USD)', color='black', row=1, col=1)
+        fig.update_xaxes(showticklabels=False, row=1, col=1)
+
+        fig.add_trace(go.Scatter(x=list(range(len(inventory))), y=inventory, mode='lines', name='inventory',
+                                 line=dict(color='orange', width=1)), row=2, col=1)
+        fig.add_shape(type="line", x0=0, y0=0, x1=len(inventory) - 1, y1=0, line=dict(color='grey', width=1), row=2,
+                      col=1)
+        fig.update_yaxes(title_text='Inventory Count', color='black', row=2, col=1)
+        fig.update_xaxes(showticklabels=False, row=2, col=1)
+
+        fig.add_trace(
+            go.Scatter(x=list(range(len(pnl))), y=pnl, mode='lines', name='Realized PnL', line=dict(color='purple', width=1)),
+            row=3, col=1)
+        fig.add_shape(type="line", x0=0, y0=0, x1=len(pnl) - 1, y1=0, line=dict(color='grey', width=1), row=3, col=1)
+        fig.update_yaxes(title_text='PnL (%)', color='black', row=3, col=1)
+        fig.update_xaxes(title_text='Number of steps (1 second each step)', color='black', row=3, col=1)
+
+        fig.update_layout(
+            height=2000,
+            width=1500,
+            title_text="Episode History"
+        )
+
+        if save_filename is None:
+            fig.show()
+        else:
+            fig.write_image(f"{save_filename}.png")
+            fig.write_html(f"{save_filename}.html")
 
     def plot_obs(self, save_filename: str or None = None) -> None:
         """

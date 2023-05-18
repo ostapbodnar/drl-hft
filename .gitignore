@@ -19,3 +19,6 @@ agent/a2c_weights/*
 
 *.ipynb
 .ipynb_checkpoints
+
+training/tmp
+training/plots

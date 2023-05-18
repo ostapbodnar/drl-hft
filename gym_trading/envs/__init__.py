@@ -1,4 +1,5 @@
 from gym_trading.envs.market_maker import MarketMaker
+from gym_trading.envs.high_frequency_trading import HighFrequencyTrading
 from gym_trading.envs.trend_following import TrendFollowing
 
 
@@ -18,7 +19,7 @@ def test_env_loop(env) -> bool:
 
         action = env.action_space.sample()
 
-        state, reward, done, _ = env.step(action)
+        state, reward, done, _, _ = env.step(action)
         total_reward += reward
         reward_list.append(reward)
 

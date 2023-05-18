@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from collections import deque
+from collections import deque, namedtuple
 from typing import Union
 
 import numpy as np
@@ -18,6 +18,8 @@ from gym_trading.utils.statistic import ExperimentStatistics
 from indicators import IndicatorManager, RSI, TnS
 
 VALID_REWARD_TYPES = [f for f in dir(reward_types) if '__' not in f]
+
+Observation = namedtuple("Observation", "kline,lob")
 
 
 class BaseEnvironment(Env, ABC):
@@ -358,8 +360,8 @@ class BaseEnvironment(Env, ABC):
 
         # save rewards to derive cumulative reward
         self.episode_stats.reward += self.reward
-
-        return self.observation, self.reward, self.done, {}
+        # TODO: truncated == false ???
+        return self.observation, self.reward, self.done, False, {}
 
     def reset(self) -> np.ndarray:
         """
@@ -368,8 +370,7 @@ class BaseEnvironment(Env, ABC):
         :return: (np.array) Observation at first step
         """
         if self.training:
-            self.local_step_number = self._random_state.randint(low=0,
-                                                                high=self.max_steps // 5)
+            self.local_step_number = self._random_state.randint(low=0, high=self.max_steps // 5)
         else:
             self.local_step_number = 0
 
@@ -521,13 +522,17 @@ class BaseEnvironment(Env, ABC):
         step_indicator_features = self._create_indicator_features()
         step_position_features = self._create_position_features()
         step_action_features = self._create_action_features(action=step_action)
-        observation = np.concatenate((step_environment_observation,
-                                      step_indicator_features,
-                                      step_position_features,
-                                      step_action_features,
-                                      self.step_reward),
-                                     axis=None)
-        return self._process_data(observation)
+        # observation = np.concatenate((step_environment_observation,
+        #                               step_indicator_features,
+        #                               step_position_features,
+        #                               step_action_features,
+        #                               self.step_reward),
+        #                              axis=None)
+
+        observation = np.concatenate((np.clip(step_environment_observation[:5], -100., 100.),
+                                      np.clip(step_environment_observation[5:], -100., 100.)))
+
+        return observation
 
     def _get_observation(self) -> np.ndarray:
         """
@@ -559,7 +564,7 @@ class BaseEnvironment(Env, ABC):
 
         :param save_filename: filename for saving the image
         """
-        self.viz.plot_episode_history(save_filename=save_filename)
+        self.viz.plot_episode_history_plotly(save_filename=save_filename)
 
     def plot_observation_history(self, save_filename: Union[str, None] = None) -> None:
         """

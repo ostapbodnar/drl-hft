@@ -7,8 +7,6 @@ import torch.optim as optim
 import tqdm
 from torch.distributions.categorical import Categorical
 
-from agent.nn_model import CnnLstmTwoHeadNNCritic, CnnLstmTwoHeadNNAgent
-from gym_trading.envs.base_environment import Observation
 
 
 class PPOMemory:

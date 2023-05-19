@@ -37,7 +37,9 @@ class BaseEnvironment(Env, ABC):
                  format_3d: bool = False,
                  reward_type: str = 'default',
                  transaction_fee: bool = True,
-                 ema_alpha: list or float or None = EMA_ALPHA):
+                 ema_alpha: list or float or None = EMA_ALPHA,
+                 max_timesteps_per_episode=1600,
+                 **kwargs):
         """
         Base class for creating environments extending OpenAI's GYM framework.
 
@@ -129,6 +131,7 @@ class BaseEnvironment(Env, ABC):
         self._best_asks = self._raw_data['midpoint'] + (self._raw_data['spread'] / 2)
 
         self.max_steps = self._raw_data.shape[0] - self.action_repeats - 1
+        self.max_timesteps_per_episode = max_timesteps_per_episode
 
         # load indicators into the indicator manager
         self.tns = IndicatorManager()
@@ -374,7 +377,8 @@ class BaseEnvironment(Env, ABC):
         :return: (np.array) Observation at first step
         """
         if self.training:
-            self.local_step_number = self._random_state.randint(low=0, high=self.max_steps // 5)
+            self.local_step_number = self._random_state.randint(low=0,
+                                                                high=self.max_steps - self.max_timesteps_per_episode)
         else:
             self.local_step_number = 0
 

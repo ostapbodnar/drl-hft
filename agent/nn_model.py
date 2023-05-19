@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class CnnLstmTwoHeadNN(nn.Module):
-    def __init__(self, mlp_hidden_size, num_classes, device):
+    def __init__(self, num_classes, device, critic=False):
         super(CnnLstmTwoHeadNN, self).__init__()
 
         # Head 1
@@ -34,20 +34,22 @@ class CnnLstmTwoHeadNN(nn.Module):
         self.mlp = nn.Sequential(
             nn.Linear(512 + 512, 256),
             nn.ReLU(),
+            nn.Dropout(0.5),
             nn.Linear(256, 64),
             nn.ReLU(),
-            nn.Linear(64, num_classes)
+            nn.Dropout(0.2),
+            nn.Linear(64, num_classes) if not critic else nn.Linear(64, 1)
         )
 
     def forward(self, kline, lob):
         # Head 1
         cnn_out1 = self.kline_cnn(kline.permute(0, 2, 1))
-        cnn_out1 = cnn_out1.reshape(cnn_out1.shape[0], 1, cnn_out1.shape[1]*cnn_out1.shape[2])
+        cnn_out1 = cnn_out1.reshape(cnn_out1.shape[0], 1, cnn_out1.shape[1] * cnn_out1.shape[2])
         _, (lstm_out1, _) = self.kline_lstm(cnn_out1)
 
         # Head 2
         cnn_out2 = self.lob_cnn(lob.permute(0, 2, 1))
-        cnn_out2 = cnn_out2.reshape(cnn_out2.shape[0], 1, cnn_out2.shape[1]*cnn_out2.shape[2])
+        cnn_out2 = cnn_out2.reshape(cnn_out2.shape[0], 1, cnn_out2.shape[1] * cnn_out2.shape[2])
         _, (lstm_out2, _) = self.lob_lstm(cnn_out2)
 
         # Concatenate LSTM outputs
@@ -60,8 +62,8 @@ class CnnLstmTwoHeadNN(nn.Module):
 
 
 class CnnLstmTwoHeadNNAgent(CnnLstmTwoHeadNN):
-    def __init__(self, mlp_hidden_size, num_classes, device):
-        super().__init__(mlp_hidden_size, num_classes, device)
+    def __init__(self, num_classes, device):
+        super().__init__(num_classes, device)
 
         self.softmax = nn.Softmax(dim=-1)
 
@@ -71,11 +73,11 @@ class CnnLstmTwoHeadNNAgent(CnnLstmTwoHeadNN):
 
 
 class CnnLstmTwoHeadNNCritic(CnnLstmTwoHeadNN):
-    def __init__(self, mlp_hidden_size, num_classes, device):
-        super().__init__(mlp_hidden_size, num_classes, device)
+    def __init__(self, num_classes, device):
+        super().__init__(num_classes, device, critic=True)
 
         self.client_linear = nn.Linear(num_classes, 1)
 
     def forward(self, kline, lob):
         output = super().forward(kline, lob)
-        return self.client_linear(output)
+        return output

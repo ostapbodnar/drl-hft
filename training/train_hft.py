@@ -2,10 +2,8 @@ import datetime
 import time
 
 import gym
-import matplotlib.pyplot as plt
 import numpy as np
 import plotly.express as px
-import tqdm
 
 import gym_trading
 from agent.custom_agent import Agent
@@ -31,10 +29,10 @@ if __name__ == '__main__':
         max_position=20,
         window_size=100,
         seed=2,
-        action_repeats=12,
+        action_repeats=10,
         training=True,
         format_3d=False,
-        reward_type='trade_completion',
+        reward_type='asymmetrical',
         ema_alpha=None,
     )
     print(f"**********\n{config}\n**********")
@@ -44,11 +42,9 @@ if __name__ == '__main__':
     N = 128
     batch_size = 32
     n_epochs = 5
-    agent = Agent(mlp_hidden_size=64,
-                  num_classes=env.action_space.n,
-                  batch_size=batch_size, n_epochs=n_epochs)
-    agent.load_models()
-    n_games = 10
+    agent = Agent(num_classes=env.action_space.n, batch_size=batch_size, n_epochs=n_epochs)
+    # agent.load_models()
+    n_games = 15
 
     figure_file = 'plots/hft-score.png'
 
@@ -88,7 +84,9 @@ if __name__ == '__main__':
 
         if avg_score > best_score:
             best_score = avg_score
-            agent.save_models(f"_{i}_{int(best_score)}")
+
+        agent.save_models(f"_{i}_{int(best_score)}")
+        env.plot_trade_history(f'plots/hft-plot-trade-history-{i}.png')
 
         print('episode', i, 'score %.1f' % score, 'avg score %.1f' % avg_score,
               'time_steps', n_steps, 'learning_steps', learn_iters, "time",

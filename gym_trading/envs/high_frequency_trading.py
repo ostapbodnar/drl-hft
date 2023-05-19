@@ -74,7 +74,10 @@ class HighFrequencyTrading(BaseEnvironment):
         if action == self.HOLD_ACTION:
             action_penalty += 0 if skip_step else ENCOURAGEMENT
         elif action == self.action_space.n - 1:
-            pnl += self.broker.flatten_inventory(self.best_bid, self.best_ask)
+            local_pnl = self.broker.flatten_inventory(self.best_bid, self.best_ask)
+            if local_pnl < 0:
+                local_pnl *= 1.5
+            pnl += local_pnl
         elif action in self.action_to_levels_mapping:
             action_penalty += self._create_orders_at_levels(*self.action_to_levels_mapping[action])
         else:

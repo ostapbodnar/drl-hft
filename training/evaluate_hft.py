@@ -31,8 +31,7 @@ if __name__ == '__main__':
 
     batch_size = 128
     n_epochs = 1
-    agent = Agent(mlp_hidden_size=64,
-                  num_classes=env.action_space.n,
+    agent = Agent(num_classes=env.action_space.n,
                   batch_size=batch_size, n_epochs=n_epochs)
 
     agent.load_models()
@@ -51,7 +50,7 @@ if __name__ == '__main__':
 
     actions_tracker = dict()
     while not done:
-        kline, lob = np.array([observation[:, :5]]), np.array([observation[:, 5:]])
+        kline, lob = np.array([observation[:, :16]]), np.array([observation[:, 16:]])
         action, prob, val = agent.choose_action(kline, lob)
 
         if action in actions_tracker:

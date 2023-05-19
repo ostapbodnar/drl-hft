@@ -4,6 +4,7 @@ import numpy as np
 import torch as T
 import torch.nn as nn
 import torch.optim as optim
+import tqdm
 from torch.distributions.categorical import Categorical
 
 from agent.nn_model import CnnLstmTwoHeadNNCritic, CnnLstmTwoHeadNNAgent
@@ -77,8 +78,9 @@ class ActorNetwork(nn.Module):
 
         return dist
 
-    def save_checkpoint(self):
-        T.save(self.state_dict(), self.checkpoint_file)
+    def save_checkpoint(self, epoch = None):
+        suffix = "" if epoch is None else str(epoch)
+        T.save(self.state_dict(), self.checkpoint_file + suffix)
 
     def load_checkpoint(self):
         self.load_state_dict(T.load(self.checkpoint_file))
@@ -101,8 +103,9 @@ class CriticNetwork(nn.Module):
 
         return value
 
-    def save_checkpoint(self):
-        T.save(self.state_dict(), self.checkpoint_file)
+    def save_checkpoint(self, epoch = None):
+        suffix = "" if epoch is None else str(epoch)
+        T.save(self.state_dict(), self.checkpoint_file + suffix)
 
     def load_checkpoint(self):
         self.load_state_dict(T.load(self.checkpoint_file))
@@ -117,16 +120,17 @@ class Agent:
         self.gae_lambda = gae_lambda
 
         self.actor = ActorNetwork(mlp_hidden_size, num_classes, 0.0003)
+        print("Device: ", self.actor.device)
         self.critic = CriticNetwork(mlp_hidden_size, num_classes, 0.0001)
         self.memory = PPOMemory(batch_size)
 
     def remember(self, kline, lob, action, probs, vals, reward, done):
         self.memory.store_memory(kline, lob, action, probs, vals, reward, done)
 
-    def save_models(self):
+    def save_models(self, epoch = None):
         print('... saving models ...')
-        self.actor.save_checkpoint()
-        self.critic.save_checkpoint()
+        self.actor.save_checkpoint(epoch)
+        self.critic.save_checkpoint(epoch)
 
     def load_models(self):
         print('... loading models ...')

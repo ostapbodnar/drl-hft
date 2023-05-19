@@ -115,7 +115,7 @@ class HighFrequencyTrading(BaseEnvironment):
         # get price data from numpy array
         price_level_price = self._get_book_data(index=price_index + level)
         # transform percentage into a hard number
-        price_level_price = round(price_level_price, 2)
+        price_level_price = round(self.midpoint * (price_level_price + 1.), 2)
         price_level_queue = self._get_book_data(index=notional_index + level)
         # create a new order
         order = LimitOrder(ccy=self.symbol,

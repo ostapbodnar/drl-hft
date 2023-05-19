@@ -98,3 +98,8 @@ Werkzeug==2.3.3
 wrapt==1.14.1
 yarl==1.9.2
 zipp==3.15.0
+
+stable-baselines==2.10.2
+torchrl
+gym[mujoco]
+tqdm

@@ -7,31 +7,47 @@ class CnnLstmTwoHeadNN(nn.Module):
         super(CnnLstmTwoHeadNN, self).__init__()
 
         # Head 1
-        self.kline_cnn = nn.Conv1d(in_channels=5, out_channels=64, kernel_size=3, padding=1)
-        self.kline_lstm = nn.LSTM(input_size=64, hidden_size=64, num_layers=2, batch_first=True)
+        self.kline_cnn = nn.Sequential(
+            nn.Conv1d(in_channels=5, out_channels=32, kernel_size=3, padding=1),
+            nn.BatchNorm1d(32),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(in_channels=32, out_channels=32, kernel_size=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+        )
+        self.kline_lstm = nn.LSTM(input_size=1600, hidden_size=512, num_layers=3, batch_first=True)
 
         # Head 2
-        self.lob_cnn = nn.Conv1d(in_channels=110, out_channels=256, kernel_size=3, padding=1)
-        self.lob_lstm = nn.LSTM(input_size=256, hidden_size=256, num_layers=2, batch_first=True)
+        self.lob_cnn = nn.Sequential(
+            nn.Conv1d(in_channels=110, out_channels=128, kernel_size=5, padding=1),
+            nn.BatchNorm1d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(in_channels=128, out_channels=128, kernel_size=5, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool1d(kernel_size=5, stride=3),
+        )
+        self.lob_lstm = nn.LSTM(input_size=3968, hidden_size=512, num_layers=3, batch_first=True)
 
         self.device = device
 
         # MLP
         self.mlp = nn.Sequential(
-            nn.Linear(256 + 64, mlp_hidden_size),
+            nn.Linear(512 + 512, 256),
             nn.ReLU(),
-            nn.Linear(mlp_hidden_size, num_classes)
+            nn.Linear(256, 64),
+            nn.ReLU(),
+            nn.Linear(64, num_classes)
         )
 
     def forward(self, kline, lob):
         # Head 1
-        cnn_out1 = self.kline_cnn(kline)
-        cnn_out1 = cnn_out1.permute(0, 2, 1)  # Reshaping for LSTM
+        cnn_out1 = self.kline_cnn(kline.permute(0, 2, 1))
+        cnn_out1 = cnn_out1.reshape(cnn_out1.shape[0], 1, cnn_out1.shape[1]*cnn_out1.shape[2])
         _, (lstm_out1, _) = self.kline_lstm(cnn_out1)
 
         # Head 2
-        cnn_out2 = self.lob_cnn(lob)
-        cnn_out2 = cnn_out2.permute(0, 2, 1)  # Reshaping for LSTM
+        cnn_out2 = self.lob_cnn(lob.permute(0, 2, 1))
+        cnn_out2 = cnn_out2.reshape(cnn_out2.shape[0], 1, cnn_out2.shape[1]*cnn_out2.shape[2])
         _, (lstm_out2, _) = self.lob_lstm(cnn_out2)
 
         # Concatenate LSTM outputs

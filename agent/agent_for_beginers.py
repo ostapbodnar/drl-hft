@@ -38,8 +38,9 @@ class PPO:
 
         # Initialize actor and critic networks
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        print("DEVICE: ", self.device)
         self.actor = policy_class(self.act_dim, self.device)  # ALG STEP 1
-        self.critic = policy_class(1,self.device)
+        self.critic = policy_class(1, self.device)
 
         # Initialize optimizers for actor and critic
         self.actor_optim = Adam(self.actor.parameters(), lr=self.lr)

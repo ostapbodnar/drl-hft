@@ -34,21 +34,20 @@ if __name__ == '__main__':
         action_repeats=12,
         training=True,
         format_3d=False,
-        reward_type='default_with_fills',
+        reward_type='trade_completion',
         ema_alpha=None,
     )
     print(f"**********\n{config}\n**********")
 
     env: gym_trading.HighFrequencyTrading = gym.make(**config)
 
-    N = 64
+    N = 128
     batch_size = 32
     n_epochs = 5
     agent = Agent(mlp_hidden_size=64,
                   num_classes=env.action_space.n,
                   batch_size=batch_size, n_epochs=n_epochs)
     agent.load_models()
-
     n_games = 10
 
     figure_file = 'plots/hft-score.png'
@@ -68,7 +67,7 @@ if __name__ == '__main__':
 
         actions_tracker = dict()
         while not done:
-            kline, lob = np.array([observation[:, :5]]), np.array([observation[:, 5:]])
+            kline, lob = np.array([observation[:, :16]]), np.array([observation[:, 16:]])
             action, prob, val = agent.choose_action(kline, lob)
 
             if action in actions_tracker:
@@ -85,7 +84,7 @@ if __name__ == '__main__':
                 learn_iters += 1
             observation = observation_
         score_history.append(score)
-        avg_score = np.mean(score_history[-3:])
+        avg_score = np.mean(score_history[-5:])
 
         if avg_score > best_score:
             best_score = avg_score
@@ -104,3 +103,4 @@ if __name__ == '__main__':
     # Visualize results
     # env.plot_observation_history('plots/hft-plot-observation-history.png')
     env.plot_trade_history('plots/hft-plot-trade-history.png')
+    env.reset()

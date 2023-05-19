@@ -8,7 +8,7 @@ class CnnLstmTwoHeadNN(nn.Module):
 
         # Head 1
         self.kline_cnn = nn.Sequential(
-            nn.Conv1d(in_channels=5, out_channels=32, kernel_size=3, padding=1),
+            nn.Conv1d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
             nn.BatchNorm1d(32),
             nn.ReLU(inplace=True),
             nn.Conv1d(in_channels=32, out_channels=32, kernel_size=2, padding=1),

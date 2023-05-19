@@ -47,6 +47,8 @@ class HighFrequencyTrading(BaseEnvironment):
             'reward_type = {}'.format(self.reward_type.upper()), 'max_steps = {}'.format(
                 self.max_steps))
 
+        self.hold_for_counter = 0
+
     def __str__(self):
         return '{} | {}-{}'.format(self.id, self.symbol, self._seed)
 
@@ -56,10 +58,11 @@ class HighFrequencyTrading(BaseEnvironment):
         action_penalty += self._create_order_at_level(level=short_level, side='short')
         return action_penalty
 
+
     def _hold(self):
         return ENCOURAGEMENT
 
-    def map_action_to_broker(self, action: int) -> Tuple[float, float]:
+    def map_action_to_broker(self, action: int, skip_step=False) -> Tuple[float, float]:
         """
         Create or adjust orders per a specified action and adjust for penalties.
 
@@ -69,7 +72,7 @@ class HighFrequencyTrading(BaseEnvironment):
         action_penalty = pnl = 0.0
 
         if action == self.HOLD_ACTION:
-            action_penalty += ENCOURAGEMENT
+            action_penalty += 0 if skip_step else ENCOURAGEMENT
         elif action == self.action_space.n - 1:
             pnl += self.broker.flatten_inventory(self.best_bid, self.best_ask)
         elif action in self.action_to_levels_mapping:

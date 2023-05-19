@@ -163,12 +163,14 @@ class BaseEnvironment(Env, ABC):
         # rendering class
         self._render = TradingGraph(sym=self.symbol)
 
+        self.steps_made = 0
+
         # graph midpoint prices
         self._render.reset_render_data(
             y_vec=self._midpoint_prices[:np.shape(self._render.x_vec)[0]])
 
     @abstractmethod
-    def map_action_to_broker(self, action: int) -> (float, float):
+    def map_action_to_broker(self, action: int, skip_step=False) -> (float, float):
         """
         Translate agent's action into an order and submit order to broker.
 
@@ -266,6 +268,7 @@ class BaseEnvironment(Env, ABC):
         :param action: (int) action to take in environment
         :return: (tuple) observation, reward, is_done, and empty `dict`
         """
+        self.steps_made += 1
         for current_step in range(self.action_repeats):
 
             if self.done:
@@ -313,7 +316,8 @@ class BaseEnvironment(Env, ABC):
 
             # Get PnL from any filled MARKET orders AND action penalties for invalid
             # actions made by the agent for future discouragement
-            action_penalty_reward, market_pnl = self.map_action_to_broker(action=step_action)
+            action_penalty_reward, market_pnl = self.map_action_to_broker(action=step_action,
+                                                                          skip_step=not (current_step == 0))
             step_pnl = limit_pnl + market_pnl
             self.step_reward = self._get_step_reward(step_pnl=step_pnl,
                                                      step_penalty=action_penalty_reward,
@@ -509,7 +513,7 @@ class BaseEnvironment(Env, ABC):
         """
         return np.array((*self.tns.get_value(),
                          *self.rsi.get_value()),
-                        dtype=np.float32).reshape(1, -1)
+                        dtype=np.float32).flatten()
 
     def _get_step_observation(self, step_action: int = 0) -> np.ndarray:
         """
@@ -529,8 +533,9 @@ class BaseEnvironment(Env, ABC):
         #                               self.step_reward),
         #                              axis=None)
 
-        observation = np.concatenate((np.clip(step_environment_observation[:5], -100., 100.),
-                                      np.clip(step_environment_observation[5:], -100., 100.)))
+        observation = np.concatenate((np.clip(step_environment_observation[:5], -20., 20.), step_indicator_features,
+                                      step_position_features,
+                                      np.clip(step_environment_observation[5:], -10., 10.)))
 
         return observation
 

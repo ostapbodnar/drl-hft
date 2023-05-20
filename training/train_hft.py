@@ -10,13 +10,16 @@ from agent.custom_agent import Agent
 from gym_trading.envs.base_environment import Observation
 
 
-def plot_learning_curve(x, scores, figure_file):
+def plot_learning_curve(x, scores, figure_file=None):
     running_avg = np.zeros(len(scores))
     for i in range(len(running_avg)):
         running_avg[i] = np.mean(scores[max(0, i - 100):(i + 1)])
 
     fig = px.line(x=x, y=running_avg, title='Running average of previous 100 scores')
-    fig.write_image(figure_file)
+    if figure_file is None:
+        fig.show()
+    else:
+        fig.write_image(figure_file)
 
 
 if __name__ == '__main__':

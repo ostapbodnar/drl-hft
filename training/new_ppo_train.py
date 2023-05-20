@@ -83,9 +83,9 @@ def main(args):
     config = dict(
         id=gym_trading.envs.HighFrequencyTrading.id,
         symbol='BTC_USDT',
-        fitting_file='/mnt/c/Users/ostap/Desktop/diploma/kline_lob_btc_04_2021_val_1618028600000_1618220350000.csv',
-        testing_file='/mnt/c/Users/ostap/Desktop/diploma/kline_lob_btc_04_2021_val_1618028600000_1618220350000.csv',
-        # testing_file='/Users/ostapbodnar/diploma_data/kline_lob_btc_04_2021_val_1618028600000_1618220350000.csv',
+        fitting_file='/Users/ostapbodnar/diploma_data/kline_lob_btc_04_2021_val_min_1618028600000_1618220350000.csv',
+        # testing_file='/mnt/c/Users/ostap/Desktop/diploma/kline_lob_btc_04_2021_val_1618028600000_1618220350000.csv',
+        testing_file='/Users/ostapbodnar/diploma_data/kline_lob_btc_04_2021_val_min_1618028600000_1618220350000.csv',
         max_position=20,
         window_size=100,
         seed=2,

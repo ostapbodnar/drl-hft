@@ -32,7 +32,7 @@ class HighFrequencyTrading(BaseEnvironment):
 
         self.action_space = spaces.Discrete(len(self.actions))
         self.observation = self.reset()  # Reset to load observation.shape
-        self.observation_space = spaces.Box(low=-10., high=10.,
+        self.observation_space = spaces.Box(low=0., high=255.,
                                             shape=self.observation.shape,
                                             dtype=np.float32)
 
@@ -62,7 +62,7 @@ class HighFrequencyTrading(BaseEnvironment):
     def _hold(self):
         return ENCOURAGEMENT
 
-    def map_action_to_broker(self, action: int, skip_step=False) -> Tuple[float, float]:
+    def map_action_to_broker(self, action: int) -> Tuple[float, float]:
         """
         Create or adjust orders per a specified action and adjust for penalties.
 
@@ -72,7 +72,7 @@ class HighFrequencyTrading(BaseEnvironment):
         action_penalty = pnl = 0.0
 
         if action == self.HOLD_ACTION:
-            action_penalty += 0 if skip_step else ENCOURAGEMENT
+            action_penalty += ENCOURAGEMENT
         elif action == self.action_space.n - 1:
             local_pnl = self.broker.flatten_inventory(self.best_bid, self.best_ask)
             if local_pnl < 0:
@@ -81,7 +81,7 @@ class HighFrequencyTrading(BaseEnvironment):
         elif action in self.action_to_levels_mapping:
             action_penalty += self._create_orders_at_levels(*self.action_to_levels_mapping[action])
         else:
-            raise ValueError("No such action exists")
+            raise ValueError(f"No such action exists: {action}")
 
         return action_penalty, pnl
 

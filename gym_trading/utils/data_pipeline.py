@@ -3,7 +3,7 @@ from datetime import datetime as dt
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from configurations import DATA_PATH, EMA_ALPHA, LOGGER, MAX_BOOK_ROWS, TIMEZONE
 from indicators import apply_ema_all_data, load_ema, reset_ema
@@ -19,12 +19,14 @@ class DataPipeline(object):
         self.alpha = alpha
         self.ema = load_ema(alpha=alpha)
         self._scaler = StandardScaler()
+        self._scaler_2 = MinMaxScaler((0, 255))
 
     def reset(self) -> None:
         """
         Reset data pipeline.
         """
         self._scaler = StandardScaler()
+        self._scaler_2 = MinMaxScaler((0, 255))
         self.ema = reset_ema(ema=self.ema)
 
     @staticmethod
@@ -59,6 +61,10 @@ class DataPipeline(object):
         :return: (void)
         """
         self._scaler.fit(orderbook_snapshot_history)
+        self._scaler_2.fit(self.clip_data(self._scaler.transform(orderbook_snapshot_history)))
+
+    def clip_data(self, data):
+        return np.clip(data, -10., 10.)
 
     def scale_data(self, data: pd.DataFrame) -> np.ndarray:
         """
@@ -67,7 +73,7 @@ class DataPipeline(object):
         :param data: (np.array) all data in environment
         :return: (np.array) normalized observation space
         """
-        return self._scaler.transform(data)
+        return self._scaler_2.transform(self.clip_data(self._scaler.transform(data)))
 
     @staticmethod
     def _midpoint_diff(data: pd.DataFrame) -> pd.DataFrame:
@@ -183,7 +189,7 @@ class DataPipeline(object):
         """
         # Import data used to fit scaler
         fitting_data_filepath = os.path.join(DATA_PATH, fitting_file)
-        fitting_data = self.import_csv(filename=fitting_data_filepath)
+        fitting_data = self.import_csv(filename=fitting_data_filepath).drop(columns=['actions'])
 
         # Derive OFI statistics
         fitting_data = self._decompose_order_flow_information(data=fitting_data)
@@ -199,6 +205,10 @@ class DataPipeline(object):
         # Import data to normalize and use in environment
         data_used_in_environment = os.path.join(DATA_PATH, testing_file)
         data = self.import_csv(filename=data_used_in_environment)
+
+        labels = data['actions']
+
+        data.drop(columns=['actions'], inplace=True)
 
         # Raw midpoint prices for back-testing environment
         midpoint_prices = data['midpoint']
@@ -219,8 +229,6 @@ class DataPipeline(object):
         column_names = normalized_data.columns.tolist()
         # Scale data with fitting data set
         normalized_data = self.scale_data(normalized_data)
-        # Remove outliers
-        normalized_data = np.clip(normalized_data, -10., 10.)
         # Put data in a data frame
         normalized_data = pd.DataFrame(normalized_data,
                                        columns=column_names,
@@ -240,4 +248,4 @@ class DataPipeline(object):
             data = data.to_numpy(dtype=np.float32)
             normalized_data = normalized_data.to_numpy(dtype=np.float32)
 
-        return midpoint_prices, data, normalized_data
+        return midpoint_prices, data, normalized_data, labels.reset_index(drop=True)

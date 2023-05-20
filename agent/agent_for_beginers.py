@@ -4,7 +4,7 @@ import gym
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.distributions import MultivariateNormal
+from torch.distributions import MultivariateNormal, Categorical
 from torch.optim import Adam
 
 
@@ -39,8 +39,8 @@ class PPO:
         # Initialize actor and critic networks
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         print("DEVICE: ", self.device)
-        self.actor = policy_class(self.act_dim, self.device)  # ALG STEP 1
-        self.critic = policy_class(1, self.device)
+        self.actor = policy_class(self.act_dim, self.device).to(self.device)  # ALG STEP 1
+        self.critic = policy_class(1, self.device).to(self.device)
 
         # Initialize optimizers for actor and critic
         self.actor_optim = Adam(self.actor.parameters(), lr=self.lr)
@@ -97,7 +97,7 @@ class PPO:
             # isn't theoretically necessary, but in practice it decreases the variance of
             # our advantages and makes convergence much more stable and faster. I added this because
             # solving some environments was too unstable without it.
-            A_k = (A_k - A_k.mean()) / (A_k.std() + 1e-10)
+            A_k = (A_k - A_k.mean()) / (A_k.std() + 1e-10) * 1000
 
             # This is the loop where we update our network for some n epochs
             for _ in range(self.n_updates_per_iteration):  # ALG STEP 6 & 7
@@ -266,7 +266,7 @@ class PPO:
                 log_prob - the log probability of the selected action in the distribution
         """
         # Query the actor network for a mean action
-        dist = self.actor(torch.tensor([obs]))
+        dist = Categorical(self.actor(torch.tensor([obs])))
 
         # Create a distribution with the mean action and std from the covariance matrix above.
         # For more information on how this distribution works, check out Andrew Ng's lecture on it:
@@ -280,6 +280,22 @@ class PPO:
 
         # Return the sampled action and the log probability of that action in our distribution
         return action, log_prob
+
+    def get_action_probs(self, obs):
+        """
+            Queries an action from the actor network, should be called from rollout.
+
+            Parameters:
+                obs - the observation at the current timestep
+
+            Return:
+                action - the action to take, as a numpy array
+                log_prob - the log probability of the selected action in the distribution
+        """
+        # Query the actor network for a mean action
+        dist = self.actor(torch.tensor([obs], device=self.device))
+
+        return dist
 
     def evaluate(self, batch_obs, batch_acts):
         """
@@ -302,7 +318,7 @@ class PPO:
 
         # Calculate the log probabilities of batch actions using most recent actor network.
         # This segment of code is similar to that in get_action()
-        dist = self.actor(batch_obs)
+        dist = Categorical(self.actor(batch_obs))
         log_probs = dist.log_prob(batch_acts)
 
         # Return the value vector V of each observation in the batch

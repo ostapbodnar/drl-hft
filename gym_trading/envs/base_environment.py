@@ -119,7 +119,7 @@ class BaseEnvironment(Env, ABC):
         #   2) raw_data - raw limit order book data, not including imbalances
         #   3) normalized_data - z-scored limit order book and order flow imbalance
         #       data, also midpoint price feature is replace by midpoint log price change
-        self._midpoint_prices, self._raw_data, self._normalized_data = \
+        self._midpoint_prices, self._raw_data, self._normalized_data, self.labels = \
             self.data_pipeline.load_environment_data(
                 fitting_file=fitting_file,
                 testing_file=testing_file,
@@ -173,7 +173,7 @@ class BaseEnvironment(Env, ABC):
             y_vec=self._midpoint_prices[:np.shape(self._render.x_vec)[0]])
 
     @abstractmethod
-    def map_action_to_broker(self, action: int, skip_step=False) -> (float, float):
+    def map_action_to_broker(self, action: int) -> (float, float):
         """
         Translate agent's action into an order and submit order to broker.
 
@@ -319,8 +319,7 @@ class BaseEnvironment(Env, ABC):
 
             # Get PnL from any filled MARKET orders AND action penalties for invalid
             # actions made by the agent for future discouragement
-            action_penalty_reward, market_pnl = self.map_action_to_broker(action=step_action,
-                                                                          skip_step=not (current_step == 0))
+            action_penalty_reward, market_pnl = self.map_action_to_broker(action=step_action)
             step_pnl = limit_pnl + market_pnl
             self.step_reward = self._get_step_reward(step_pnl=step_pnl,
                                                      step_penalty=action_penalty_reward,
@@ -490,15 +489,6 @@ class BaseEnvironment(Env, ABC):
         """
         return self._raw_data[self.local_step_number][index]
 
-    @staticmethod
-    def _process_data(observation: np.ndarray) -> np.ndarray:
-        """
-        Reshape observation for function approximator.
-
-        :param observation: observation space
-        :return: (np.array) clipped observation space
-        """
-        return np.clip(observation, -10., 10.)
 
     def _create_action_features(self, action: int) -> np.ndarray:
         """
@@ -537,11 +527,11 @@ class BaseEnvironment(Env, ABC):
         #                               self.step_reward),
         #                              axis=None)
 
-        observation = np.concatenate((np.clip(step_environment_observation[:5], -20., 20.), step_indicator_features,
+        observation = np.concatenate((step_environment_observation[:5], step_indicator_features,
                                       step_position_features,
-                                      np.clip(step_environment_observation[5:], -10., 10.)))
+                                      step_environment_observation[5:]))
 
-        return observation
+        return np.clip(observation, 0., 255.)
 
     def _get_observation(self) -> np.ndarray:
         """

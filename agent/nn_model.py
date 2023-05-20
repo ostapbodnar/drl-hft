@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.distributions import Categorical
 
 
 class CnnLstmTwoHeadNN(nn.Module):
@@ -64,6 +63,6 @@ class CnnLstmTwoHeadNN(nn.Module):
         output = self.mlp(lstm_out)
 
         if self.num_classes != 1:
-            output = Categorical(self.softmax(output))
+            output = self.softmax(output)
 
         return output

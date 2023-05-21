@@ -7,8 +7,6 @@ import torch.optim as optim
 import tqdm
 from torch.distributions.categorical import Categorical
 
-from agent.nn_model import CnnLstmTwoHeadNNCritic, CnnLstmTwoHeadNNAgent
-from gym_trading.envs.base_environment import Observation
 
 
 class PPOMemory:
@@ -60,13 +58,13 @@ class PPOMemory:
 
 
 class ActorNetwork(nn.Module):
-    def __init__(self, mlp_hidden_size, num_classes, lr,
+    def __init__(self, num_classes, lr,
                  chkpt_dir='tmp/ppo'):
         super(ActorNetwork, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, 'actor_torch_ppo')
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
-        self.actor = CnnLstmTwoHeadNNAgent(mlp_hidden_size, num_classes, self.device)
+        self.actor = CnnLstmTwoHeadNNAgent(num_classes, self.device)
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
 
@@ -87,13 +85,13 @@ class ActorNetwork(nn.Module):
 
 
 class CriticNetwork(nn.Module):
-    def __init__(self, mlp_hidden_size, num_classes, lr,
+    def __init__(self, num_classes, lr,
                  chkpt_dir='tmp/ppo'):
         super(CriticNetwork, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, 'critic_torch_ppo')
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
-        self.critic = CnnLstmTwoHeadNNCritic(mlp_hidden_size, num_classes, self.device)
+        self.critic = CnnLstmTwoHeadNNCritic(num_classes, self.device)
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.to(self.device)
@@ -112,16 +110,16 @@ class CriticNetwork(nn.Module):
 
 
 class Agent:
-    def __init__(self, mlp_hidden_size, num_classes, gamma=0.99, gae_lambda=0.95,
+    def __init__(self, num_classes, gamma=0.99, gae_lambda=0.95,
                  policy_clip=0.2, batch_size=64, n_epochs=10):
         self.gamma = gamma
         self.policy_clip = policy_clip
         self.n_epochs = n_epochs
         self.gae_lambda = gae_lambda
 
-        self.actor = ActorNetwork(mlp_hidden_size, num_classes, 0.0003)
+        self.actor = ActorNetwork(num_classes, 0.0003)
         print("Device: ", self.actor.device)
-        self.critic = CriticNetwork(mlp_hidden_size, num_classes, 0.0001)
+        self.critic = CriticNetwork(num_classes, 0.0001)
         self.memory = PPOMemory(batch_size)
 
     def remember(self, kline, lob, action, probs, vals, reward, done):

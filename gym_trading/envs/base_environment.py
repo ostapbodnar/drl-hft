@@ -37,7 +37,10 @@ class BaseEnvironment(Env, ABC):
                  format_3d: bool = False,
                  reward_type: str = 'default',
                  transaction_fee: bool = True,
-                 ema_alpha: list or float or None = EMA_ALPHA):
+                 ema_alpha: list or float or None = EMA_ALPHA,
+                 max_timesteps_per_episode=1600,
+                 shuffle_on_reset=True,
+                 **kwargs):
         """
         Base class for creating environments extending OpenAI's GYM framework.
 
@@ -117,7 +120,7 @@ class BaseEnvironment(Env, ABC):
         #   2) raw_data - raw limit order book data, not including imbalances
         #   3) normalized_data - z-scored limit order book and order flow imbalance
         #       data, also midpoint price feature is replace by midpoint log price change
-        self._midpoint_prices, self._raw_data, self._normalized_data = \
+        self._midpoint_prices, self._raw_data, self._normalized_data, self.labels = \
             self.data_pipeline.load_environment_data(
                 fitting_file=fitting_file,
                 testing_file=testing_file,
@@ -129,6 +132,7 @@ class BaseEnvironment(Env, ABC):
         self._best_asks = self._raw_data['midpoint'] + (self._raw_data['spread'] / 2)
 
         self.max_steps = self._raw_data.shape[0] - self.action_repeats - 1
+        self.max_timesteps_per_episode = max_timesteps_per_episode
 
         # load indicators into the indicator manager
         self.tns = IndicatorManager()
@@ -163,9 +167,14 @@ class BaseEnvironment(Env, ABC):
         # rendering class
         self._render = TradingGraph(sym=self.symbol)
 
+        self.steps_made = 0
+
         # graph midpoint prices
         self._render.reset_render_data(
             y_vec=self._midpoint_prices[:np.shape(self._render.x_vec)[0]])
+
+        self._verbose = False
+        self._shuffle_on_reset = shuffle_on_reset
 
     @abstractmethod
     def map_action_to_broker(self, action: int) -> (float, float):
@@ -266,6 +275,8 @@ class BaseEnvironment(Env, ABC):
         :param action: (int) action to take in environment
         :return: (tuple) observation, reward, is_done, and empty `dict`
         """
+        self.steps_made += 1
+        target = self.labels[self.local_step_number]
         for current_step in range(self.action_repeats):
 
             if self.done:
@@ -361,7 +372,7 @@ class BaseEnvironment(Env, ABC):
         # save rewards to derive cumulative reward
         self.episode_stats.reward += self.reward
         # TODO: truncated == false ???
-        return self.observation, self.reward, self.done, False, {}
+        return self.observation, self.reward, self.done, False, {'target': target}
 
     def reset(self) -> np.ndarray:
         """
@@ -369,13 +380,17 @@ class BaseEnvironment(Env, ABC):
 
         :return: (np.array) Observation at first step
         """
-        if self.training:
-            self.local_step_number = self._random_state.randint(low=0, high=self.max_steps // 5)
+        if self.training and self._shuffle_on_reset:
+            self.local_step_number = self._random_state.randint(low=0,
+                                                                high=self.max_steps - self.max_timesteps_per_episode)
+        elif self.training and self.local_step_number < self.max_steps:
+            # case for iterative training when self._shuffle_on_reset = False
+            pass
         else:
             self.local_step_number = 0
 
         # print out episode statistics if there was any activity by the agent
-        if self.broker.total_trade_count > 0 or self.broker.realized_pnl != 0.:
+        if (self.broker.total_trade_count > 0 or self.broker.realized_pnl != 0.) and self._verbose:
             self.episode_stats.number_of_episodes += 1
             print(('-' * 25), '{}-{} {} EPISODE RESET'.format(
                 self.symbol, self._seed, self.reward_type.upper()), ('-' * 25))
@@ -391,8 +406,8 @@ class BaseEnvironment(Env, ABC):
             print('First step:\t{}'.format(self.local_step_number))
             print(('=' * 75))
         else:
-            print('Resetting environment #{} on episode #{}.'.format(
-                self._seed, self.episode_stats.number_of_episodes))
+            print('Resetting environment #{} on episode #{}, local step: {}.'.format(
+                self._seed, self.episode_stats.number_of_episodes, self.local_step_number))
 
         self.A_t, self.B_t = 0., 0.
         self.reward = 0.0
@@ -427,6 +442,9 @@ class BaseEnvironment(Env, ABC):
         self.observation = self._get_observation()
 
         return self.observation
+
+    def set_verbosity(self, v):
+        self._verbose = v
 
     def render(self, mode: str = 'human') -> None:
         """
@@ -482,16 +500,6 @@ class BaseEnvironment(Env, ABC):
         """
         return self._raw_data[self.local_step_number][index]
 
-    @staticmethod
-    def _process_data(observation: np.ndarray) -> np.ndarray:
-        """
-        Reshape observation for function approximator.
-
-        :param observation: observation space
-        :return: (np.array) clipped observation space
-        """
-        return np.clip(observation, -10., 10.)
-
     def _create_action_features(self, action: int) -> np.ndarray:
         """
         Create a features array for the current time step's action.
@@ -509,7 +517,7 @@ class BaseEnvironment(Env, ABC):
         """
         return np.array((*self.tns.get_value(),
                          *self.rsi.get_value()),
-                        dtype=np.float32).reshape(1, -1)
+                        dtype=np.float32).flatten()
 
     def _get_step_observation(self, step_action: int = 0) -> np.ndarray:
         """
@@ -529,10 +537,11 @@ class BaseEnvironment(Env, ABC):
         #                               self.step_reward),
         #                              axis=None)
 
-        observation = np.concatenate((np.clip(step_environment_observation[:5], -100., 100.),
-                                      np.clip(step_environment_observation[5:], -100., 100.)))
+        observation = np.concatenate((step_environment_observation[:5], step_indicator_features,
+                                      step_position_features,
+                                      step_environment_observation[5:]))
 
-        return observation
+        return np.clip(observation, 0., 255.)
 
     def _get_observation(self) -> np.ndarray:
         """

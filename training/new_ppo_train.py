@@ -70,22 +70,22 @@ def _test(env, actor_model):
 
 def main(args):
     hyperparameters = {
-        'timesteps_per_batch': 9600,
-        'max_timesteps_per_episode': 2400,
+        'timesteps_per_batch': 3000,
+        'max_timesteps_per_episode': 1500,
         'gamma': 0.99,
         'n_updates_per_iteration': 10,
         'lr': 3e-4,
         'clip': 0.2,
         'render': False,
-        'render_every_i': 10
+        'render_every_i': 50
     }
 
     config = dict(
         id=gym_trading.envs.HighFrequencyTrading.id,
         symbol='BTC_USDT',
-        fitting_file='/Users/ostapbodnar/diploma_data/kline_lob_btc_04_2021_val_min_1618028600000_1618220350000.csv',
-        # testing_file='/mnt/c/Users/ostap/Desktop/diploma/kline_lob_btc_04_2021_val_1618028600000_1618220350000.csv',
-        testing_file='/Users/ostapbodnar/diploma_data/kline_lob_btc_04_2021_val_min_1618028600000_1618220350000.csv',
+        fitting_file='/mnt/c/Users/ostap/Desktop/diploma/kline_lob_btc_04_2021_val_min_labeled.csv',
+        testing_file='/mnt/c/Users/ostap/Desktop/diploma/kline_lob_btc_04_2021_val_min_labeled.csv',
+        # testing_file='/Users/ostapbodnar/diploma_data/kline_lob_btc_04_2021_val_min_1618028600000_1618220350000.csv',
         max_position=20,
         window_size=100,
         seed=2,
@@ -102,7 +102,7 @@ def main(args):
 
     # Train or test, depending on the mode specified
     if args.mode == 'train':
-        train(env=env, hyperparameters=hyperparameters, actor_model=args.actor_model, critic_model=args.critic_model)
+        train(env=env, hyperparameters=hyperparameters, actor_model="ppo_actor-labeled.pth", critic_model="ppo_critic-labeled.pth")
     else:
         _test(env=env, actor_model=args.actor_model)
 

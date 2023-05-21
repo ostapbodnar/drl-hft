@@ -172,6 +172,8 @@ class BaseEnvironment(Env, ABC):
         self._render.reset_render_data(
             y_vec=self._midpoint_prices[:np.shape(self._render.x_vec)[0]])
 
+        self.verbose = False
+
     @abstractmethod
     def map_action_to_broker(self, action: int) -> (float, float):
         """
@@ -272,6 +274,7 @@ class BaseEnvironment(Env, ABC):
         :return: (tuple) observation, reward, is_done, and empty `dict`
         """
         self.steps_made += 1
+        target = self.labels[self.local_step_number]
         for current_step in range(self.action_repeats):
 
             if self.done:
@@ -367,7 +370,7 @@ class BaseEnvironment(Env, ABC):
         # save rewards to derive cumulative reward
         self.episode_stats.reward += self.reward
         # TODO: truncated == false ???
-        return self.observation, self.reward, self.done, False, {}
+        return self.observation, self.reward, self.done, False, {'target': target}
 
     def reset(self) -> np.ndarray:
         """
@@ -382,7 +385,7 @@ class BaseEnvironment(Env, ABC):
             self.local_step_number = 0
 
         # print out episode statistics if there was any activity by the agent
-        if self.broker.total_trade_count > 0 or self.broker.realized_pnl != 0.:
+        if (self.broker.total_trade_count > 0 or self.broker.realized_pnl != 0.) and self.verbose:
             self.episode_stats.number_of_episodes += 1
             print(('-' * 25), '{}-{} {} EPISODE RESET'.format(
                 self.symbol, self._seed, self.reward_type.upper()), ('-' * 25))
@@ -434,6 +437,9 @@ class BaseEnvironment(Env, ABC):
         self.observation = self._get_observation()
 
         return self.observation
+
+    def set_verbosity(self, v):
+        self.verbose = v
 
     def render(self, mode: str = 'human') -> None:
         """
@@ -488,7 +494,6 @@ class BaseEnvironment(Env, ABC):
         :return: (np.array) order book snapshot vector
         """
         return self._raw_data[self.local_step_number][index]
-
 
     def _create_action_features(self, action: int) -> np.ndarray:
         """

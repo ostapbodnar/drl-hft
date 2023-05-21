@@ -70,14 +70,14 @@ def _test(env, actor_model):
 
 def main(args):
     hyperparameters = {
-        'timesteps_per_batch': 3000,
-        'max_timesteps_per_episode': 1500,
+        'timesteps_per_batch': 2000,
+        'max_timesteps_per_episode': 500,
         'gamma': 0.99,
-        'n_updates_per_iteration': 10,
+        'n_updates_per_iteration': 20,
         'lr': 3e-4,
         'clip': 0.2,
         'render': False,
-        'render_every_i': 50
+        'save_freq': 100
     }
 
     config = dict(
@@ -92,8 +92,9 @@ def main(args):
         action_repeats=10,
         training=True,
         format_3d=False,
-        reward_type='asymmetrical',
+        reward_type='trade_completion',
         ema_alpha=None,
+        shuffle_on_reset=False,
         **hyperparameters
     )
     print(f"**********\n{config}\n**********")
@@ -121,8 +122,8 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--mode', dest='mode', type=str, default='train')  # can be 'train' or 'test'
-    parser.add_argument('--actor_model', dest='actor_model', type=str, default='')  # your actor model filename
-    parser.add_argument('--critic_model', dest='critic_model', type=str, default='')  # your critic model filename
+    parser.add_argument('--actor_model', dest='actor_model', type=str, default='./tmp/ppo/temp_actor')  # your actor model filename
+    parser.add_argument('--critic_model', dest='critic_model', type=str, default='./tmp/ppo/temp_critic')  # your critic model filename
 
     args = parser.parse_args()
 

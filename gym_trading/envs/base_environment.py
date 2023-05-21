@@ -39,6 +39,7 @@ class BaseEnvironment(Env, ABC):
                  transaction_fee: bool = True,
                  ema_alpha: list or float or None = EMA_ALPHA,
                  max_timesteps_per_episode=1600,
+                 shuffle_on_reset=True,
                  **kwargs):
         """
         Base class for creating environments extending OpenAI's GYM framework.
@@ -172,7 +173,8 @@ class BaseEnvironment(Env, ABC):
         self._render.reset_render_data(
             y_vec=self._midpoint_prices[:np.shape(self._render.x_vec)[0]])
 
-        self.verbose = False
+        self._verbose = False
+        self._shuffle_on_reset = shuffle_on_reset
 
     @abstractmethod
     def map_action_to_broker(self, action: int) -> (float, float):
@@ -378,14 +380,17 @@ class BaseEnvironment(Env, ABC):
 
         :return: (np.array) Observation at first step
         """
-        if self.training:
+        if self.training and self._shuffle_on_reset:
             self.local_step_number = self._random_state.randint(low=0,
                                                                 high=self.max_steps - self.max_timesteps_per_episode)
+        elif self.training and self.local_step_number < self.max_steps:
+            # case for iterative training when self._shuffle_on_reset = False
+            pass
         else:
             self.local_step_number = 0
 
         # print out episode statistics if there was any activity by the agent
-        if (self.broker.total_trade_count > 0 or self.broker.realized_pnl != 0.) and self.verbose:
+        if (self.broker.total_trade_count > 0 or self.broker.realized_pnl != 0.) and self._verbose:
             self.episode_stats.number_of_episodes += 1
             print(('-' * 25), '{}-{} {} EPISODE RESET'.format(
                 self.symbol, self._seed, self.reward_type.upper()), ('-' * 25))
@@ -401,8 +406,8 @@ class BaseEnvironment(Env, ABC):
             print('First step:\t{}'.format(self.local_step_number))
             print(('=' * 75))
         else:
-            print('Resetting environment #{} on episode #{}.'.format(
-                self._seed, self.episode_stats.number_of_episodes))
+            print('Resetting environment #{} on episode #{}, local step: {}.'.format(
+                self._seed, self.episode_stats.number_of_episodes, self.local_step_number))
 
         self.A_t, self.B_t = 0., 0.
         self.reward = 0.0
@@ -439,7 +444,7 @@ class BaseEnvironment(Env, ABC):
         return self.observation
 
     def set_verbosity(self, v):
-        self.verbose = v
+        self._verbose = v
 
     def render(self, mode: str = 'human') -> None:
         """

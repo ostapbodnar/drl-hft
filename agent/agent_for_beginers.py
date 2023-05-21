@@ -152,6 +152,10 @@ class PPO:
                 torch.save(self.critic.state_dict(), f'./tmp/ppo/ppo_critic_{i_so_far}.pth')
                 self.env.plot_trade_history(f'plots/hft-plot-trade-history-ppo-beg-{i_so_far}')
 
+            self.env.set_verbosity(True)
+            self.env.reset()
+            self.env.set_verbosity(False)
+
     def rollout(self):
         """
             Too many transformers references, I'm sorry. This is where we collect the batch of data
@@ -219,10 +223,6 @@ class PPO:
             # Track episodic lengths and rewards
             batch_lens.append(ep_t + 1)
             batch_rews.append(ep_rews)
-
-        self.env.set_verbosity(True)
-        self.env.reset()
-        self.env.set_verbosity(False)
 
         # Reshape data as tensors in the shape specified in function description, before returning
         batch_obs = torch.tensor(batch_obs, dtype=torch.float).to(self.device)

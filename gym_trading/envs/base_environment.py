@@ -530,12 +530,6 @@ class BaseEnvironment(Env, ABC):
         step_indicator_features = self._create_indicator_features()
         step_position_features = self._create_position_features()
         step_action_features = self._create_action_features(action=step_action)
-        # observation = np.concatenate((step_environment_observation,
-        #                               step_indicator_features,
-        #                               step_position_features,
-        #                               step_action_features,
-        #                               self.step_reward),
-        #                              axis=None)
 
         observation = np.concatenate((step_environment_observation[:5], step_indicator_features,
                                       step_position_features,

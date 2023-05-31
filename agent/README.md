@@ -1,19 +1,19 @@
 # Agent
-As of September 18, 2019.
+As of May 31, 2023.
 
 ## Overview
-Agents are implemented by wrapping Keras-RL API. Each file in
-this directory is a different type of reinforcement learning algo.
+Agent are implemented using Pytorch. And uses proximal police optimization for training
 
-## DQN Architecture
+## Architecture
 - Dueling architecture
 - Double Q-learning
 - Experience replay
 
 ## Neural Networks
-CNN
-- 3x convolutional layers
-- 1x dense mlp
+CnnLstmTwoHeadNN
+- 2 heads of 2x convolutional layers
+- 2 hidden layers of 3x LSTM for each head
+- dense MLP
 
-MLP
-- 2x Dense mlp
+### MLP
+- 3x Dense mlp

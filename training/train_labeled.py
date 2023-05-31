@@ -6,8 +6,8 @@ import torch.nn.functional as Fun
 from torch import nn
 
 import gym_trading
-from agent.agent_for_beginers import PPO
 from agent.nn_model import CnnLstmTwoHeadNN
+from agent.ppo import PPO
 from gym_trading.envs.base_environment import Observation
 
 
@@ -24,22 +24,21 @@ def plot_loss_curve(x, scores, figure_file=None):
 
 
 if __name__ == '__main__':
-    hyperparameters = {
-        'timesteps_per_batch': 600_000,
-        'max_timesteps_per_episode': 20_000,
-        'gamma': 0.99,
-        'n_updates_per_iteration': 10,
-        'lr': 0.0001,
-        'clip': 0.2,
-        'render': False,
-        'render_every_i': 10
-    }
-    config = dict(
+    ppo_agent_parameters = dict(
+        timesteps_per_batch=600_000,
+        max_timesteps_per_episode=20_000,
+        gamma=0.99,
+        n_updates_per_iteration=10,
+        lr=0.0001,
+        clip=0.2,
+        render=False,
+        render_every_i=10
+    )
+    env_config = dict(
         id=gym_trading.envs.HighFrequencyTrading.id,
         symbol='BTC_USDT',
         fitting_file='/mnt/c/Users/ostap/Desktop/diploma/kline_lob_btc_04_2021_val_min_labeled.csv',
         testing_file='/mnt/c/Users/ostap/Desktop/diploma/kline_lob_btc_04_2021_val_min_labeled.csv',
-        # testing_file='/Users/ostapbodnar/diploma_data/kline_lob_btc_04_2021_val_min_labeled.csv',
         max_position=20,
         window_size=100,
         seed=2,
@@ -48,13 +47,13 @@ if __name__ == '__main__':
         format_3d=False,
         reward_type='asymmetrical',
         ema_alpha=None,
-        **hyperparameters
+        **ppo_agent_parameters
     )
-    print(f"**********\n{config}\n**********")
+    print(f"**********\n{env_config}\n**********")
 
-    env: gym_trading.HighFrequencyTrading = gym.make(**config)
+    env: gym_trading.HighFrequencyTrading = gym.make(**env_config)
 
-    model = PPO(policy_class=CnnLstmTwoHeadNN, env=env, **hyperparameters)
+    model = PPO(policy_class=CnnLstmTwoHeadNN, env=env, **ppo_agent_parameters)
     obs = env.reset()
 
     t = 0

@@ -3,7 +3,6 @@ import os
 
 import pytz as tz
 
-
 # Data Directory
 ROOT_PATH = os.path.dirname(os.path.realpath(__file__))
 DATA_PATH = os.path.join(ROOT_PATH, 'data_recorder', 'database', 'data_exports')
@@ -14,9 +13,6 @@ print("LOGS_PATH: ", LOGS_PATH)
 logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] %(message)s',
                     handlers=[logging.FileHandler(LOGS_PATH)])
 LOGGER = logging.getLogger('crypto_rl_log')
-
-# ./recorder.py
-SNAPSHOT_RATE = 1.0  # For example, 0.25 = 4x per second
 
 MAX_BOOK_ROWS = 15
 
@@ -35,4 +31,3 @@ EMA_ALPHA = 0.99  # [0.9, 0.99, 0.999, 0.9999]
 
 # agent penalty configs
 ENCOURAGEMENT = 0.000000000001
-

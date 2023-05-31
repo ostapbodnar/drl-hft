@@ -10,8 +10,6 @@ from indicators import apply_ema_all_data, load_ema, reset_ema
 
 
 class DataPipeline(object):
-    KLINE_COLUMNS = ['open', 'high', 'low', 'close', 'volume']
-
     def __init__(self, alpha: float or list or None = EMA_ALPHA):
         """
         Data Pipeline constructor.

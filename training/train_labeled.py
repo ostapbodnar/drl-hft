@@ -6,7 +6,7 @@ import torch.nn.functional as Fun
 from torch import nn
 
 import gym_trading
-from agent.agent_for_beginers import PPO
+from agent.ppo import PPO
 from agent.nn_model import CnnLstmTwoHeadNN
 from gym_trading.envs.base_environment import Observation
 

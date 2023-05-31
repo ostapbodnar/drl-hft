@@ -1,5 +1,4 @@
 import itertools
-from enum import Enum
 from typing import Tuple
 
 import numpy as np
@@ -8,8 +7,6 @@ from gym import spaces
 from configurations import ENCOURAGEMENT
 from gym_trading.envs.base_environment import BaseEnvironment
 from gym_trading.utils.order import LimitOrder
-
-
 
 
 class HighFrequencyTrading(BaseEnvironment):
@@ -57,7 +54,6 @@ class HighFrequencyTrading(BaseEnvironment):
         action_penalty += self._create_order_at_level(level=long_level, side='long')
         action_penalty += self._create_order_at_level(level=short_level, side='short')
         return action_penalty
-
 
     def _hold(self):
         return ENCOURAGEMENT

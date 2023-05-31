@@ -128,7 +128,7 @@ def asymmetrical(inventory_count: int, midpoint_change: float, half_spread_pct: 
 
 
 def trade_completion(step_pnl: float, market_order_fee: float,
-                     profit_ratio: float = 2.) -> float:
+                     profit_ratio: float = 2., preferred_action_loss=None) -> float:
     """
     Alternate approach for reward calculation which places greater importance on
     trades that have returned at least a 1:1 profit-to-loss ratio after
@@ -149,5 +149,8 @@ def trade_completion(step_pnl: float, market_order_fee: float,
         reward -= 1.0
     else:  # Loss is less than the transaction fee and negative
         reward += step_pnl
+
+    if reward > 0 and preferred_action_loss is not None:
+        reward += 0.5 * reward * preferred_action_loss
 
     return reward

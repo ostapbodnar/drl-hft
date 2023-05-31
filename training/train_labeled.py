@@ -37,12 +37,13 @@ if __name__ == '__main__':
     env_config = dict(
         id=gym_trading.envs.HighFrequencyTrading.id,
         symbol='BTC_USDT',
-        fitting_file='/mnt/c/Users/ostap/Desktop/diploma/kline_lob_btc_04_2021_val_min_labeled.csv',
-        testing_file='/mnt/c/Users/ostap/Desktop/diploma/kline_lob_btc_04_2021_val_min_labeled.csv',
+        fitting_file='/Users/ostapbodnar/diploma_data/kline_lob_btc_04_2021_val_min_labeled.csv',
+        testing_file='/Users/ostapbodnar/diploma_data/kline_lob_btc_04_2021_val_min_labeled.csv',
         max_position=20,
         window_size=100,
         seed=2,
         action_repeats=1,
+        add_target_loss_to_reward=False,
         training=True,
         format_3d=False,
         reward_type='asymmetrical',
@@ -58,8 +59,8 @@ if __name__ == '__main__':
 
     t = 0
 
-    model.actor.load_state_dict(torch.load('./ppo_actor-labeled.pth'))
-    model.critic.load_state_dict(torch.load('./ppo_critic-labeled.pth'))
+    model.actor.load_state_dict(torch.load('./ppo_actor-labeled.pth', map_location=model.device))
+    model.critic.load_state_dict(torch.load('./ppo_critic-labeled.pth', map_location=model.device))
     print("weights loaded")
 
     loss_func = nn.MSELoss(reduction='sum')
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     model.actor.eval()
     model.actor.train()
 
-    while t < hyperparameters["timesteps_per_batch"]:
+    while t < ppo_agent_parameters["timesteps_per_batch"]:
         score_history = []
 
         obs = model.env.reset()
@@ -75,7 +76,7 @@ if __name__ == '__main__':
         ep_t = 0
         local_losses = []
 
-        for ep_t in range(config["max_timesteps_per_episode"]):
+        for ep_t in range(env_config["max_timesteps_per_episode"]):
 
             t += 1
             action_probs = model.get_action_probs(obs)

@@ -40,6 +40,7 @@ class BaseEnvironment(Env, ABC):
                  ema_alpha: list or float or None = EMA_ALPHA,
                  max_timesteps_per_episode=1600,
                  shuffle_on_reset=True,
+                 add_target_loss_to_reward=False,
                  **kwargs):
         """
         Base class for creating environments extending OpenAI's GYM framework.
@@ -76,6 +77,8 @@ class BaseEnvironment(Env, ABC):
         self.viz = Visualize(
             columns=['midpoint', 'buys', 'sells', 'inventory', 'realized_pnl'],
             store_historical_observations=True)
+
+        self.add_target_loss_to_reward = add_target_loss_to_reward
 
         # get Broker class to keep track of PnL and orders
         self.broker = Broker(max_position=max_position, transaction_fee=transaction_fee)
@@ -199,7 +202,8 @@ class BaseEnvironment(Env, ABC):
                          step_pnl: float,
                          step_penalty: float,
                          long_filled: bool,
-                         short_filled: bool) -> float:
+                         short_filled: bool,
+                         preferred_action_loss=None) -> float:
         """
         Calculate current step reward using a reward function.
 
@@ -257,7 +261,8 @@ class BaseEnvironment(Env, ABC):
             reward += reward_types.trade_completion(
                 step_pnl=step_pnl,
                 market_order_fee=MARKET_ORDER_FEE,
-                profit_ratio=2.
+                profit_ratio=2.,
+                preferred_action_loss=preferred_action_loss
             ) + step_penalty
 
         else:  # Default implementation
@@ -275,6 +280,7 @@ class BaseEnvironment(Env, ABC):
         :param action: (int) action to take in environment
         :return: (tuple) observation, reward, is_done, and empty `dict`
         """
+        preferred_action_loss = None
         self.steps_made += 1
         target = self.labels[self.local_step_number]
         for current_step in range(self.action_repeats):
@@ -287,8 +293,14 @@ class BaseEnvironment(Env, ABC):
             if current_step == 0:
                 self.reward = 0.
                 step_action = action
+                target_action = target
             else:
                 step_action = 0
+                target_action = 0
+
+            if self.add_target_loss_to_reward:
+                preferred_action_loss = target_action == step_action
+
 
             # Get current step's midpoint and change in midpoint price percentage
             self.midpoint = self._midpoint_prices[self.local_step_number]
@@ -329,7 +341,9 @@ class BaseEnvironment(Env, ABC):
             self.step_reward = self._get_step_reward(step_pnl=step_pnl,
                                                      step_penalty=action_penalty_reward,
                                                      long_filled=long_filled,
-                                                     short_filled=short_filled)
+                                                     short_filled=short_filled,
+                                                     preferred_action_loss=preferred_action_loss,
+                                                     )
 
             # Add current step's observation to the data buffer
             step_observation = self._get_step_observation(step_action=step_action)
@@ -360,7 +374,8 @@ class BaseEnvironment(Env, ABC):
             self.reward += self._get_step_reward(step_pnl=flatten_pnl,
                                                  step_penalty=0.,
                                                  long_filled=False,
-                                                 short_filled=False)
+                                                 short_filled=False,
+                                                 preferred_action_loss=preferred_action_loss)
 
             # store for visualization after the episode
             self.viz.add(self.midpoint,  # arguments map to the column names in _init_
